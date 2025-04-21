@@ -37,19 +37,3 @@ export class EssenceDrop {
     return this.collected && Date.now() - this.collectedTime > 800
   }
 }
-
-// Export the function that was missing
-export function updateEssenceDrops(essenceDrops: EssenceDrop[], playerPos: number): void {
-  // Update each essence drop
-  essenceDrops.forEach((drop) => {
-    drop.update(playerPos)
-  })
-
-  // Filter out drops that should be removed
-  // Note: This doesn't modify the original array, so the calling code needs to handle this
-}
-
-// Helper function to clean up collected essence drops
-export function cleanupEssenceDrops(essenceDrops: EssenceDrop[]): EssenceDrop[] {
-  return essenceDrops.filter((drop) => !drop.shouldRemove())
-}

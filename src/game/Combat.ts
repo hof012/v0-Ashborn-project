@@ -1,156 +1,136 @@
-import type { GameState } from "./GameState"
-import type { Monster } from "./Monster"
 import type { Player } from "./Player"
+import type { Monster } from "./Monster"
+import { DamageLog } from "./DamageLog"
+import { MONSTER_ENGAGE_DISTANCE } from "./Monster"
 
-// This is the named export that was missing
-export const Combat = {
-  update(gameState: GameState, deltaTime: number): void {
-    // Basic stub implementation
-    const player = gameState.player
+// Maximum number of monsters that can engage the player at once
+export const MAX_MONSTERS_IN_COMBAT = 2
 
-    // Skip combat if player is leveling up
-    if (player.isLevelingUp) return
+export class Combat {
+  static resolve(player: Player, monsters: Monster[]) {
+    if (!player.isAlive) return
 
-    // Process player attacks
-    this.processPlayerAttacks(gameState)
+    // Count how many monsters are currently in combat
+    let monstersInCombat = 0
 
-    // Process monster attacks
-    this.processMonsterAttacks(gameState)
-  },
+    // Sort monsters by distance to player (closest first)
+    const sortedMonsters = [...monsters].sort((a, b) => {
+      const distA = Math.abs(a.position - player.position)
+      const distB = Math.abs(b.position - player.position)
+      return distA - distB
+    })
 
-  processPlayerAttacks(gameState: GameState): void {
-    const player = gameState.player
+    for (const monster of sortedMonsters) {
+      if (monster.isDead()) continue
 
-    // Check if player can attack
-    if (player.lastAttackTime === 0) {
-      // Find monsters in attack range
-      const monstersInRange = gameState.monsters.filter((monster) => {
-        return (
-          Math.abs(monster.position - player.position) < 60 && monster.state !== "dying" && monster.state !== "dead"
-        )
-      })
+      const distToPlayer = Math.abs(monster.position - player.position)
+      const inRange = distToPlayer <= MONSTER_ENGAGE_DISTANCE
 
-      if (monstersInRange.length > 0) {
-        // Attack the closest monster
-        const closestMonster = monstersInRange.reduce((closest, current) => {
-          const closestDist = Math.abs(closest.position - player.position)
-          const currentDist = Math.abs(current.position - player.position)
-          return currentDist < closestDist ? current : closest
-        })
+      // If monster is in range, engage in combat
+      if (inRange) {
+        // Limit the number of monsters that can engage at once
+        if (monstersInCombat < MAX_MONSTERS_IN_COMBAT) {
+          monstersInCombat++
 
-        // Calculate damage based on player stats
-        const damage = this.calculatePlayerDamage(player)
+          // If monster is ready to attack
+          if (monster.isAttacking()) {
+            // Monster attacks player
+            const monsterDmg = monster.attackPower
+            monster.startAttack()
 
-        // Apply damage to monster
-        this.applyDamageToMonster(gameState, closestMonster, damage)
+            // Check if player dodged
+            const dodged = player.receiveDamage(monsterDmg)
 
-        // Set attack cooldown
-        player.lastAttackTime = gameState.gameTime
-        player.state = "attacking"
-
-        // Reset player state after attack animation
-        setTimeout(() => {
-          if (player.state === "attacking") {
-            player.state = "running"
+            if (!dodged) {
+              DamageLog.logPlayerHit(monsterDmg, monster.position)
+            } else {
+              // Log dodge event
+              DamageLog.logPlayerDodge(monster.position)
+            }
           }
-        }, 500)
-      }
-    }
-  },
 
-  processMonsterAttacks(gameState: GameState): void {
-    const player = gameState.player
+          // Player attacks monster if not on cooldown
+          const { damage: playerDmg, isCritical } = player.dealDamage(monster.type)
 
-    // Process each monster's attack
-    gameState.monsters.forEach((monster) => {
-      if (monster.state === "attacking") {
-        const distanceToPlayer = Math.abs(monster.position - player.position)
+          // Skip if player is on attack cooldown
+          if (playerDmg > 0) {
+            // Player attacks monster
+            monster.receiveDamage(playerDmg)
 
-        // Check if monster is in range to hit player
-        if (distanceToPlayer < 50) {
-          // Apply damage to player
-          this.applyDamageToPlayer(gameState, monster.damage)
+            // Log damage (for floating text)
+            DamageLog.logMonsterHit(monster.id, playerDmg, monster.position, isCritical)
+
+            // Monster dies? Grant rewards
+            if (monster.isDead()) {
+              // Record kill for trait system
+              player.recordMonsterKill(monster.type)
+
+              const xpReward = monster.type === "boss" ? 15 : 5
+              // Essence is now handled by the drop system
+              player.gainXP(xpReward)
+            }
+          }
+        } else {
+          // Too many monsters in combat, this one waits
+          // Slightly push back monsters that are waiting
+          if (monster.position < player.position) {
+            monster.position -= 0.5 // Move slightly away to prevent piling up
+          }
         }
       }
+    }
+  }
+
+  // NEW: Handle combat with a single monster (for combat stage)
+  static resolveSingle(player: Player, monster: Monster) {
+    if (!player.isAlive || monster.isDead()) return
+
+    // Debug logging
+    console.debug("Combat state:", {
+      monsterId: monster.id,
+      monsterType: monster.type,
+      monsterHealth: monster.health,
+      inCombat: monster.inCombat,
+      distToPlayer: Math.abs(monster.position - player.position),
+      playerAttackCooldown: player.attackCooldown,
+      monsterAttackCooldown: monster.attackCooldown,
+      playerInAttackAnimation: player.inAttackAnimation, // Changed from function call to property access
+      monsterInAttackAnimation: monster.inAttackAnimation, // Changed from function call to property access
     })
-  },
 
-  calculatePlayerDamage(player: Player): number {
-    // Base damage + strength bonus
-    const baseDamage = 5 + Math.floor(player.strength / 2)
+    // If monster is ready to attack
+    if (monster.isAttacking()) {
+      // Monster attacks player
+      const monsterDmg = monster.attackPower
+      monster.startAttack()
 
-    // Critical hit chance based on luck
-    const critChance = 0.05 + player.luck * 0.01
-    const isCrit = Math.random() < critChance
+      // Check if player dodged
+      const dodged = player.receiveDamage(monsterDmg)
 
-    // Apply critical multiplier if applicable
-    return isCrit ? Math.floor(baseDamage * 1.5) : baseDamage
-  },
-
-  applyDamageToMonster(gameState: GameState, monster: Monster, damage: number): void {
-    // Apply damage to monster
-    monster.health -= damage
-
-    // Create damage number
-    if (gameState.damageNumbers) {
-      gameState.damageNumbers.push({
-        value: damage,
-        x: monster.position,
-        y: 100,
-        isCritical: damage > 7, // Assuming damage > 7 is a critical hit
-        createdAt: gameState.gameTime,
-        lifetime: 1000,
-      })
-    }
-
-    // Check if monster is defeated
-    if (monster.health <= 0) {
-      monster.health = 0
-      monster.state = "dying"
-      monster.lastStateChange = gameState.gameTime
-
-      // Award experience to player
-      gameState.player.experience += monster.experienceValue
-    } else {
-      // Set monster to hit state
-      monster.state = "hit"
-      monster.lastStateChange = gameState.gameTime
-    }
-  },
-
-  applyDamageToPlayer(gameState: GameState, damage: number): void {
-    const player = gameState.player
-
-    // Apply damage to player
-    player.health -= damage
-
-    // Create damage number for player
-    if (gameState.damageNumbers) {
-      gameState.damageNumbers.push({
-        value: damage,
-        x: player.position,
-        y: 100,
-        isCritical: false,
-        createdAt: gameState.gameTime,
-        lifetime: 1000,
-      })
-    }
-
-    // Set player to hit state
-    player.state = "hit"
-
-    // Reset player state after hit animation
-    setTimeout(() => {
-      if (player.state === "hit") {
-        player.state = "running"
+      if (!dodged) {
+        DamageLog.logPlayerHit(monsterDmg, monster.position)
+      } else {
+        // Log dodge event
+        DamageLog.logPlayerDodge(monster.position)
       }
-    }, 500)
-
-    // Check if player is defeated
-    if (player.health <= 0) {
-      player.health = 0
-      gameState.isPaused = true
-      gameState.isGameOver = true
     }
-  },
+
+    // Player attacks monster if not on cooldown
+    const { damage: playerDmg, isCritical } = player.dealDamage(monster.type)
+
+    // Skip if player is on attack cooldown
+    if (playerDmg > 0) {
+      // Player attacks monster
+      monster.receiveDamage(playerDmg)
+
+      // Log damage (for floating text)
+      DamageLog.logMonsterHit(monster.id, playerDmg, monster.position, isCritical)
+    }
+
+    // Ensure proper state cleanup if monster died
+    if (monster.isDead()) {
+      monster.inCombat = false
+      monster.attackCooldown = 0
+    }
+  }
 }

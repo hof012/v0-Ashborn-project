@@ -1,23 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
-  // Ensure images from any domain can be used
-  images: {
-    domains: ["localhost", "vercel.app"],
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-    ],
-    unoptimized: true,
+  // Explicitly set output to ensure Next.js detection
+  output: "standalone",
+  // Disable experimental features that might cause issues
+  experimental: {
+    appDir: true,
   },
+  // Ensure TypeScript errors don't block deployment
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  // Ensure ESLint errors don't block deployment
   eslint: {
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    ignoreBuildErrors: true,
+  // Disable image optimization
+  images: {
+    unoptimized: true,
   },
 }
 
