@@ -3,6 +3,7 @@ import type { Monster } from "./Monster"
 import type { BackgroundLayer } from "./Background"
 import type { EssenceDrop } from "./EssenceDrop"
 
+// Define game state interface for type safety
 export interface GameState {
   gameTime: number
   distance: number
@@ -16,14 +17,4 @@ export interface GameState {
   biomeLength: number
   showBiomeTransition: boolean
   biomeTransitionTime: number
-  particles?: any[]
-  damageNumbers?: {
-    value: number
-    x: number
-    y: number
-    isCritical: boolean
-    createdAt: number
-    lifetime: number
-  }[]
-  // Add other game state properties as needed
 }

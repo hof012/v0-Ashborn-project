@@ -2,8 +2,10 @@ import type { GameState } from "./GameState"
 import type { Monster } from "./Monster"
 import type { Player } from "./Player"
 
-export class Combat {
-  static update(gameState: GameState, deltaTime: number): void {
+// This is the named export that was missing
+export const Combat = {
+  update(gameState: GameState, deltaTime: number): void {
+    // Basic stub implementation
     const player = gameState.player
 
     // Skip combat if player is leveling up
@@ -14,9 +16,9 @@ export class Combat {
 
     // Process monster attacks
     this.processMonsterAttacks(gameState)
-  }
+  },
 
-  static processPlayerAttacks(gameState: GameState): void {
+  processPlayerAttacks(gameState: GameState): void {
     const player = gameState.player
 
     // Check if player can attack
@@ -54,9 +56,9 @@ export class Combat {
         }, 500)
       }
     }
-  }
+  },
 
-  static processMonsterAttacks(gameState: GameState): void {
+  processMonsterAttacks(gameState: GameState): void {
     const player = gameState.player
 
     // Process each monster's attack
@@ -71,9 +73,9 @@ export class Combat {
         }
       }
     })
-  }
+  },
 
-  static calculatePlayerDamage(player: Player): number {
+  calculatePlayerDamage(player: Player): number {
     // Base damage + strength bonus
     const baseDamage = 5 + Math.floor(player.strength / 2)
 
@@ -83,9 +85,9 @@ export class Combat {
 
     // Apply critical multiplier if applicable
     return isCrit ? Math.floor(baseDamage * 1.5) : baseDamage
-  }
+  },
 
-  static applyDamageToMonster(gameState: GameState, monster: Monster, damage: number): void {
+  applyDamageToMonster(gameState: GameState, monster: Monster, damage: number): void {
     // Apply damage to monster
     monster.health -= damage
 
@@ -108,15 +110,15 @@ export class Combat {
       monster.lastStateChange = gameState.gameTime
 
       // Award experience to player
-      player.experience += monster.experienceValue
+      gameState.player.experience += monster.experienceValue
     } else {
       // Set monster to hit state
       monster.state = "hit"
       monster.lastStateChange = gameState.gameTime
     }
-  }
+  },
 
-  static applyDamageToPlayer(gameState: GameState, damage: number): void {
+  applyDamageToPlayer(gameState: GameState, damage: number): void {
     const player = gameState.player
 
     // Apply damage to player
@@ -150,5 +152,5 @@ export class Combat {
       gameState.isPaused = true
       gameState.isGameOver = true
     }
-  }
+  },
 }

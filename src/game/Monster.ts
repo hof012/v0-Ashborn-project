@@ -1,5 +1,6 @@
 import type { GameState } from "./GameState"
 
+// Define monster interface for type safety
 export interface Monster {
   id: string
   type: string
@@ -14,13 +15,20 @@ export interface Monster {
   // Add other monster properties as needed
 }
 
+// This is the named export that was missing
 export function updateMonsters(gameState: GameState, deltaTime: number): void {
-  const player = gameState.player
-
-  // Update each monster
+  // Basic stub implementation
   gameState.monsters.forEach((monster) => {
     // Skip dead monsters
     if (monster.state === "dead") return
+
+    // Basic monster AI logic
+    const distanceToPlayer = Math.abs(monster.position - gameState.player.position)
+
+    // Monster is in attack range
+    if (distanceToPlayer < 50 && monster.state === "idle") {
+      monster.state = "attacking"
+    }
 
     // Handle monster state transitions
     if (monster.state === "dying" && gameState.gameTime - monster.lastStateChange > 1000) {
@@ -29,15 +37,6 @@ export function updateMonsters(gameState: GameState, deltaTime: number): void {
 
       // Spawn essence drop when monster dies
       spawnEssenceDrop(gameState, monster.position, monster.essenceValue)
-    }
-
-    // Basic monster AI
-    const distanceToPlayer = Math.abs(monster.position - player.position)
-
-    // Monster is in attack range
-    if (distanceToPlayer < 50 && monster.state === "idle") {
-      monster.state = "attacking"
-      monster.lastStateChange = gameState.gameTime
     }
 
     // Reset to idle after attacking
