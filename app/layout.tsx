@@ -1,17 +1,20 @@
-import type { Metadata } from 'next'
-import './globals.css'
+import type React from "react"
+import "./globals.css"
+import type { Metadata } from "next"
 
+// Define metadata - a Next.js App Router feature
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: "Ashborn",
+  description: "A side-scrolling auto-run RPG with roguelike elements",
+    generator: 'v0.dev'
 }
 
+// This is a Next.js App Router layout component
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en">
       <body>{children}</body>
