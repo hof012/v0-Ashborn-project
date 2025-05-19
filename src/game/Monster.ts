@@ -1,6 +1,6 @@
 import { MonsterTier } from "./TraitSystem"
 
-export type MonsterType = "wolf" | "goblin" | "slime" | "boss" | "normal"
+export type MonsterType = "wolf" | "goblin" | "slime" | "boss"
 
 // Define the engagement distance constant
 export const MONSTER_ENGAGE_DISTANCE = 60 // Pixels - adjust as needed for visual feel

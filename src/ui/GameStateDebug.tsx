@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react"
 
-// TODO: Define more specific GameSystemStateType and PlayerType interfaces globally
 interface GameStateDebugProps {
-  gameSystemState: any; // Renamed from gameState
-  player: any;
+  gameState: any
+  player: any
 }
 
-export default function GameStateDebug({ gameSystemState, player }: GameStateDebugProps) { // Renamed gameState to gameSystemState
+export default function GameStateDebug({ gameState, player }: GameStateDebugProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [gameStateInfo, setGameStateInfo] = useState<any>({})
 
@@ -18,10 +17,10 @@ export default function GameStateDebug({ gameSystemState, player }: GameStateDeb
     // Update game state info every 100ms
     const interval = setInterval(() => {
       setGameStateInfo({
-        gameState: gameSystemState.current, // Changed from gameState.current
-        previousState: gameSystemState.getPreviousState?.() || "unknown", // Changed from gameState.getPreviousState
-        isTransitioning: gameSystemState.isTransitioning, // Changed from gameState.isTransitioning
-        transitionProgress: gameSystemState.transitionProgress, // Changed from gameState.transitionProgress
+        gameState: gameState.current,
+        previousState: gameState.getPreviousState?.() || "unknown",
+        isTransitioning: gameState.isTransitioning,
+        transitionProgress: gameState.transitionProgress,
         playerHealth: player.health,
         playerMaxHealth: player.maxHealth,
         playerLevel: player.level,
@@ -36,7 +35,7 @@ export default function GameStateDebug({ gameSystemState, player }: GameStateDeb
     }, 100)
 
     return () => clearInterval(interval)
-  }, [isOpen, gameSystemState, player]) // Added gameSystemState to dependency array
+  }, [isOpen, gameState, player])
 
   if (!isOpen) {
     return (

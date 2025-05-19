@@ -16,22 +16,47 @@ import XPBar from "./XPBar"
 import BiomeNotification from "./BiomeNotification"
 
 interface HUDProps {
-  player: any; // TODO: Replace with a well-defined PlayerType
-  pet: any;    // TODO: Replace with a well-defined PetType
-  petDefinition?: PetTypeDefinition;
-  distance: number;
-  latestRandomBonus: RandomBonus | null;
-  currentGameState: string; // Renamed from gameState, receives gameSystemState.current
-  currentBiome: BiomeType;
+  health: number
+  maxHealth: number
+  level: number
+  xp: number
+  xpToNextLevel: number
+  essence: number
+  distance: number
+  mp: number
+  maxMP: number
+  stats: {
+    current: BaseStats
+    descriptions: Record<keyof BaseStats, string>
+  }
+  unlockedAbilities: string[]
+  petDefinition?: PetTypeDefinition
+  petLevel?: number
+  unlockedTraits: Trait[]
+  randomBonuses: RandomBonus[]
+  latestRandomBonus: RandomBonus | null
+  gameState: GameState
+  currentBiome: BiomeType
 }
 
 export default function HUD({
-  player,
-  pet,
-  petDefinition,
+  health,
+  maxHealth,
+  level,
+  xp,
+  xpToNextLevel,
+  essence,
   distance,
+  mp,
+  maxMP,
+  stats,
+  unlockedAbilities,
+  petDefinition,
+  petLevel = 1,
+  unlockedTraits,
+  randomBonuses,
   latestRandomBonus,
-  currentGameState, // Renamed
+  gameState,
   currentBiome,
 }: HUDProps) {
   const [showStats, setShowStats] = useState(false)
@@ -40,23 +65,6 @@ export default function HUD({
   const [showLatestBonus, setShowLatestBonus] = useState(false)
   const [lastBiome, setLastBiome] = useState<BiomeType>(currentBiome)
   const [showBiomeNotification, setShowBiomeNotification] = useState(false)
-
-  // Destructure from player and pet for convenience if needed, or access directly
-  const {
-    health,
-    maxHealth,
-    level,
-    xp,
-    xpToNextLevel,
-    essence,
-    mp,
-    maxMP,
-    stats,
-    unlockedAbilities,
-    unlockedTraits,
-    randomBonuses
-  } = player; 
-  const petLevel = pet.level; // Example, access pet.xp, pet.nextLevelXp similarly if needed
 
   // Auto-hide latest bonus after 3 seconds
   useEffect(() => {
@@ -133,17 +141,17 @@ export default function HUD({
             {/* Game State Indicator */}
             <div className="flex items-center">
               <span className="mr-1">
-                {currentGameState === "running"
+                {gameState === "running"
                   ? "🏃"
-                  : currentGameState === "combat"
+                  : gameState === "combat"
                     ? "⚔️"
-                    : currentGameState === "levelup"
+                    : gameState === "levelup"
                       ? "🎉"
-                      : currentGameState === "traitselect"
+                      : gameState === "traitselect"
                         ? "✨"
                         : "💀"}
               </span>
-              <span className="text-yellow-300 capitalize">{currentGameState}</span>
+              <span className="text-yellow-300 capitalize">{gameState}</span>
             </div>
           </div>
         </div>

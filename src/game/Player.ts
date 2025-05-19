@@ -83,10 +83,6 @@ export class Player {
     // Update max health with trait bonuses
     const healthBonus = this.traitSystem.getHealthBonus()
     this.maxHealth = derived.maxHP + healthBonus
-    // Ensure health does not exceed maxHealth
-    if (this.health > this.maxHealth) {
-      this.health = this.maxHealth;
-    }
 
     // Update attack animation state with better timing
     if (this.inAttackAnimation) {
@@ -96,20 +92,16 @@ export class Player {
       // Log animation state for debugging
       if (elapsed % 100 < 10) {
         // Log roughly every 100ms to avoid spam
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Attack animation:", {
-            elapsed,
-            duration: this.attackAnimationDuration,
-            remaining: this.attackAnimationDuration - elapsed,
-          })
-        }
+        console.log("Attack animation:", {
+          elapsed,
+          duration: this.attackAnimationDuration,
+          remaining: this.attackAnimationDuration - elapsed,
+        })
       }
 
       if (elapsed >= this.attackAnimationDuration) {
         this.inAttackAnimation = false
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Attack animation complete")
-        }
+        console.log("Attack animation complete")
       }
     }
 
@@ -119,9 +111,7 @@ export class Player {
 
       // Log cooldown for debugging
       if (this.attackCooldown === 0) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Attack cooldown reset to 0")
-        }
+        console.log("Attack cooldown reset to 0")
       }
     }
   }
@@ -239,7 +229,7 @@ export class Player {
 
     // Update derived stats
     const derived = this.stats.calculateDerivedStats()
-    this.maxHealth = derived.maxHP
+    this.maxHealth = derived.maxHealth
     this.health = this.maxHealth // Heal to full on level up
     this.attackPower = derived.attackPower
 
@@ -321,26 +311,12 @@ export class Player {
 
   // NEW: Apply pet bonuses to player stats
   applyPetBonus(petBonus: Partial<Record<keyof Stats["base"], number>>) {
-    // Clear any existing temporary bonuses (e.g., from a previous pet)
-    this.stats.clearBonuses();
-
-    // Apply each stat from the new pet as a temporary bonus
+    // Apply each stat from the pet to the player's base stats
     for (const [stat, value] of Object.entries(petBonus)) {
       if (value && typeof value === "number") {
-        // Ensure the stat is a valid key of BaseStats before adding
-        if (stat === "strength" || stat === "dexterity" || stat === "intelligence" || stat === "luck") {
-          this.stats.addBonus(stat as keyof Stats["base"], value);
-        }
+        this.stats.increaseStat(stat as keyof Stats["base"], value)
       }
     }
-
-    // TODO: Ensure player's direct stats like maxHealth, health, attackPower are updated
-    // after pet bonuses change. This might involve calling a new update method or
-    // ensuring the Player.update() method correctly refreshes these from this.stats.calculateDerivedStats().
-    // For now, let's assume Player.update() or other game loop logic handles this.
-    // For example, maxHealth is updated in Player.update() via traitSystem.applyTraitEffects and getHealthBonus.
-    // Attack power is read directly from derived.attackPower in dealDamage.
-    // Health needs careful handling, especially ensuring it doesn't exceed new maxHealth.
   }
 
   // Check if any stats have reached thresholds to unlock special abilities
@@ -445,13 +421,13 @@ export class Player {
 
   // Set combat state
   enterCombat(targetId: string) {
-    this.inCombat = true;
-    this.currentTarget = targetId;
+    this.inCombat = true
+    this.currentTarget = targetId
   }
 
   // Exit combat state
   exitCombat() {
-    this.inCombat = false;
-    this.currentTarget = null;
+    this.inCombat = false
+    this.currentTarget = null
   }
 }
