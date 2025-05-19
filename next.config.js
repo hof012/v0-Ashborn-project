@@ -1,24 +1,45 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  // Explicitly set output to ensure Next.js detection
+  reactStrictMode: false,
   output: "standalone",
-  // Disable experimental features that might cause issues
   experimental: {
     appDir: true,
   },
-  // Ensure TypeScript errors don't block deployment
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Ensure ESLint errors don't block deployment
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Disable image optimization for better compatibility
   images: {
     unoptimized: true,
+    domains: ["localhost"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
   },
+  webpack: (config) => {
+    // Add support for importing image files
+    config.module.rules.push({
+      test: /\.(png|jpe?g|gif|svg|webp)$/i,
+      use: [
+        {
+          loader: "file-loader",
+          options: {
+            publicPath: "/_next",
+            name: "static/media/[name].[hash].[ext]",
+          },
+        },
+      ],
+    })
+
+    return config
+  },
+  // Disable source maps in production to reduce bundle size
+  productionBrowserSourceMaps: false,
 }
 
 module.exports = nextConfig

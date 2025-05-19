@@ -41,6 +41,7 @@ export default function Sprite({
   const [useFallback, setUseFallback] = useState(false)
   const animationRef = useRef<number | null>(null)
   const lastFrameTimeRef = useRef<number>(0)
+  const loadAttemptedRef = useRef<boolean>(false)
 
   // Get the emoji fallback for this sprite
   const emoji = getEmojiFallback(type, state, variant)
@@ -73,22 +74,38 @@ export default function Sprite({
 
   // Load sprite data
   useEffect(() => {
-    const data = getSpriteData(type, state, variant)
-    setSpriteData(data)
+    const loadSprite = () => {
+      try {
+        loadAttemptedRef.current = true
+        const data = getSpriteData(type, state, variant)
+        setSpriteData(data)
 
-    // Check if the sprite sheet exists
-    if (data) {
-      const img = new Image()
-      img.src = data.src
-      img.onload = () => setUseFallback(false)
-      img.onerror = () => setUseFallback(true)
-    } else {
-      setUseFallback(true)
+        // Check if the sprite sheet exists
+        if (data) {
+          const img = new Image()
+          img.crossOrigin = "anonymous" // Add this to avoid CORS issues
+          img.src = data.src
+          img.onload = () => setUseFallback(false)
+          img.onerror = (e) => {
+            console.warn(`Failed to load sprite: ${data.src}`, e)
+            setUseFallback(true)
+          }
+        } else {
+          console.warn(`No sprite data for ${type}-${state}-${variant}`)
+          setUseFallback(true)
+        }
+      } catch (error) {
+        console.error("Error loading sprite:", error)
+        setUseFallback(true)
+      }
     }
 
     // Reset animation
     setCurrentFrame(0)
     lastFrameTimeRef.current = 0
+
+    // Load the sprite
+    loadSprite()
 
     return () => {
       if (animationRef.current) {
