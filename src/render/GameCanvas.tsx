@@ -17,7 +17,7 @@ interface GameCanvasProps {
   petTrails: any[]
   petDefinition: any
   distance: number
-  gameState: {
+  gameSystemState: {
     current: string
     isTransitioning: boolean
     transitionProgress: number
@@ -37,6 +37,16 @@ const COMBAT_CAMERA = {
   CINEMATIC_BORDER_HEIGHT: 0.1, // 10% of screen height for cinematic borders
 }
 
+// Define a type for AttackEffect for clarity
+interface AttackEffectType {
+  id: string;
+  x: number;
+  y: number;
+  direction: "left" | "right";
+  type: "slash" | "impact" | "critical";
+  timestamp: number;
+}
+
 export default function GameCanvas({
   player,
   monsters,
@@ -46,7 +56,7 @@ export default function GameCanvas({
   petTrails = [],
   petDefinition,
   distance,
-  gameState,
+  gameSystemState,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -54,17 +64,7 @@ export default function GameCanvas({
   const { isFlashing, shakeClass } = useHitFlash(latestDamage)
   const [windowWidth, setWindowWidth] = useState(1000)
   const [windowHeight, setWindowHeight] = useState(600)
-  // Add state for tracking attack effects
-  const [attackEffects, setAttackEffects] = useState<
-    Array<{
-      id: string
-      x: number
-      y: number
-      direction: "left" | "right"
-      type: "slash" | "impact" | "critical"
-      timestamp: number
-    }>
-  >([])
+  const [attackEffects, setAttackEffects] = useState<AttackEffectType[]>([])
 
   // Add a ref to track previous attack animation state
   const prevAttackAnimationRef = useRef(false)
@@ -95,7 +95,7 @@ export default function GameCanvas({
       const newEffect = {
         id: `attack-${Date.now()}`,
         x:
-          gameState.current === "combat"
+          gameSystemState.current === "combat"
             ? windowWidth * COMBAT_CAMERA.PLAYER_POSITION + 30
             : PLAYER_SCREEN_POSITION + 30,
         y: characterBasePosition - 20,
@@ -104,18 +104,18 @@ export default function GameCanvas({
         timestamp: Date.now(),
       }
 
-      setAttackEffects((prev) => [...prev, newEffect])
+      setAttackEffects((prev: AttackEffectType[]) => [...prev, newEffect])
     }
 
     // Update ref for next check
     prevAttackAnimationRef.current = player.inAttackAnimation
-  }, [player.inAttackAnimation, gameState.current, windowWidth, characterBasePosition])
+  }, [player.inAttackAnimation, gameSystemState.current, windowWidth, characterBasePosition])
 
   // Add a cleanup effect for old attack effects
   useEffect(() => {
     const interval = setInterval(() => {
       // Remove effects older than 1 second
-      setAttackEffects((prev) => prev.filter((effect) => Date.now() - effect.timestamp < 1000))
+      setAttackEffects((prev: AttackEffectType[]) => prev.filter((effect: AttackEffectType) => Date.now() - effect.timestamp < 1000))
     }, 1000)
 
     return () => clearInterval(interval)
@@ -124,11 +124,11 @@ export default function GameCanvas({
   // Helper function to convert world coordinates to screen coordinates
   const worldToScreen = (worldX: number): number => {
     // Safely access cameraOffset, defaulting to {x: 0, y: 0} if undefined
-    const cameraOffset = gameState.cameraOffset || { x: 0, y: 0 }
-    const transitionProgress = gameState.isTransitioning ? gameState.transitionProgress : 1
+    const cameraOffset = gameSystemState.cameraOffset || { x: 0, y: 0 }
+    const transitionProgress = gameSystemState.isTransitioning ? gameSystemState.transitionProgress : 1
 
     // In combat, smoothly transition camera to combat positions
-    if (gameState.current === "combat") {
+    if (gameSystemState.current === "combat") {
       const playerTargetX = windowWidth * COMBAT_CAMERA.PLAYER_POSITION
       const monsterTargetX = windowWidth * COMBAT_CAMERA.MONSTER_POSITION
 
@@ -186,9 +186,9 @@ export default function GameCanvas({
   }
 
   // Apply camera shake
-  const cameraStyle = gameState.cameraOffset
+  const cameraStyle = gameSystemState.cameraOffset
     ? {
-        transform: `translate(${gameState.cameraOffset.x}px, ${gameState.cameraOffset.y}px)`,
+        transform: `translate(${gameSystemState.cameraOffset.x}px, ${gameSystemState.cameraOffset.y}px)`,
       }
     : {}
 
@@ -215,17 +215,17 @@ export default function GameCanvas({
       <ParallaxBackground
         biome={currentBiome.type}
         playerPosition={player.position}
-        inCombat={gameState.current === "combat"}
+        inCombat={gameSystemState.current === "combat"}
       />
 
       {/* Cinematic borders for combat mode */}
-      {gameState.current === "combat" && (
+      {gameSystemState.current === "combat" && (
         <>
           <div
             className="absolute left-0 right-0 bg-black z-50"
             style={{
               top: 0,
-              height: `${windowHeight * COMBAT_CAMERA.CINEMATIC_BORDER_HEIGHT * gameState.transitionProgress}px`,
+              height: `${windowHeight * COMBAT_CAMERA.CINEMATIC_BORDER_HEIGHT * gameSystemState.transitionProgress}px`,
               transition: "height 0.5s ease-out",
             }}
           />
@@ -233,7 +233,7 @@ export default function GameCanvas({
             className="absolute left-0 right-0 bg-black z-50"
             style={{
               bottom: 0,
-              height: `${windowHeight * COMBAT_CAMERA.CINEMATIC_BORDER_HEIGHT * gameState.transitionProgress}px`,
+              height: `${windowHeight * COMBAT_CAMERA.CINEMATIC_BORDER_HEIGHT * gameSystemState.transitionProgress}px`,
               transition: "height 0.5s ease-out",
             }}
           />
@@ -244,13 +244,14 @@ export default function GameCanvas({
       <div
         style={{
           position: "absolute",
-          left: gameState.current === "combat" ? windowWidth * COMBAT_CAMERA.PLAYER_POSITION : PLAYER_SCREEN_POSITION,
+          left: gameSystemState.current === "combat" ? windowWidth * COMBAT_CAMERA.PLAYER_POSITION : PLAYER_SCREEN_POSITION,
           top: characterBasePosition,
           transform: `translateX(-50%) ${isFlashing ? "scale(1.1)" : "scale(1)"}`,
           userSelect: "none",
           filter: isFlashing ? "drop-shadow(0 0 5px red)" : "none",
           transition: "transform 0.1s ease-in-out, filter 0.1s ease-in-out, left 0.5s ease-in-out",
-          zIndex: 25,
+          zIndex: player.isAlive ? 20 : 10,
+          imageRendering: "pixelated",
         }}
       >
         <PixelSprite
@@ -260,7 +261,7 @@ export default function GameCanvas({
           width={48}
           height={48}
           scale={1.2}
-          animate={gameState.current === "combat" ? "bob" : "none"}
+          animate={gameSystemState.current === "combat" ? "bob" : "none"}
           flipX={player.facingRight === false}
         />
 
@@ -294,7 +295,7 @@ export default function GameCanvas({
       {/* Monsters - Force all monsters to be slimes */}
       {monsters.map((monster) => {
         // In combat mode, only render the active combat monster
-        if (gameState.current === "combat" && monster.id !== gameState.combatMonsterId) {
+        if (gameSystemState.current === "combat" && monster.id !== gameSystemState.combatMonsterId) {
           return null
         }
 
@@ -309,7 +310,7 @@ export default function GameCanvas({
 
         // In combat mode, position the monster at the combat position
         const monsterX =
-          gameState.current === "combat" && monster.id === gameState.combatMonsterId
+          gameSystemState.current === "combat" && monster.id === gameSystemState.combatMonsterId
             ? windowWidth * COMBAT_CAMERA.MONSTER_POSITION
             : screenX
 
@@ -333,7 +334,7 @@ export default function GameCanvas({
                 width={32}
                 height={32}
                 scale={monster.tier === 2 ? 1.5 : monster.tier === 1 ? 1.3 : 1}
-                animate={monster.inAttackAnimation ? "shake" : gameState.current === "combat" ? "bob" : "none"}
+                animate={monster.inAttackAnimation ? "shake" : gameSystemState.current === "combat" ? "bob" : "none"}
                 flipX={!monster.facingRight}
                 tier={monster.tier}
                 state={getMonsterAnimationState(monster)}
@@ -368,7 +369,7 @@ export default function GameCanvas({
             </div>
 
             {/* Monster name/type label in combat */}
-            {gameState.current === "combat" && monster.id === gameState.combatMonsterId && (
+            {gameSystemState.current === "combat" && monster.id === gameSystemState.combatMonsterId && (
               <div
                 style={{
                   position: "absolute",
@@ -561,7 +562,7 @@ export default function GameCanvas({
           direction={effect.direction}
           type={effect.type}
           onComplete={() => {
-            setAttackEffects((prev) => prev.filter((e) => e.id !== effect.id))
+            setAttackEffects((prev: AttackEffectType[]) => prev.filter((e) => e.id !== effect.id))
           }}
         />
       ))}

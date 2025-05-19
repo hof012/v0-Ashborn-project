@@ -30,6 +30,11 @@ export default function PetSelector({
     { type: "ghost", emoji: "👻", name: "Ghost Buddy" },
   ]
 
+  if (!petDefinition) {
+    console.warn(`PetSelector: petDefinition is undefined for currentType: ${currentType}`)
+    return null
+  }
+
   return (
     <div className="fixed top-20 left-2 z-40">
       <button

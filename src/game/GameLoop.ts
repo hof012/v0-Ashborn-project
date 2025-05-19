@@ -7,7 +7,7 @@ import { EssenceDrop } from "./EssenceDrop"
 import { Pet, type PetType } from "./Pet"
 import { getPetTypeBasedOnKills, getPetTypeById, type PetTypeDefinition } from "./PetTypes"
 import { GameStateManager } from "./GameStateManager"
-import { MONSTER_ENGAGE_DISTANCE } from "./Monster"
+import { MONSTER_ENGAGE_DISTANCE, type MonsterType } from "./Monster"
 
 export class GameLoop {
   player = new Player()
@@ -126,25 +126,25 @@ export class GameLoop {
       this.player.attackCooldown = 0
 
       // Add debug logging
-      console.log("Level up detected! Current state:", {
-        previousState: currentState,
-        playerAttackAnimation: this.player.inAttackAnimation,
-        playerAttackCooldown: this.player.attackCooldown,
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Level up detected! Current state:", {
+          previousState: currentState,
+          playerAttackAnimation: this.player.inAttackAnimation,
+          playerAttackCooldown: this.player.attackCooldown,
+        })
+      }
 
       // Schedule transition back to previous state
       setTimeout(() => {
         if (this.gameState.getState() === "levelup") {
           const returnState = this.gameState.getPreviousState()
           this.gameState.transitionTo(returnState)
-          console.log("Returning to state after level up:", returnState)
+          this.showLevelUp = false
+          if (process.env.NODE_ENV === 'development') {
+            console.log("Returning to state after level up:", returnState)
+          }
         }
       }, 2000)
-    }
-
-    // Hide level up notification after 2 seconds
-    if (this.showLevelUp && Date.now() - this.lastLevelUp > 2000) {
-      this.showLevelUp = false
     }
 
     // Check for trait notification
@@ -207,11 +207,13 @@ export class GameLoop {
         this.player.inAttackAnimation = false
         this.player.attackCooldown = 0
 
-        console.log("Combat ending, resetting player state:", {
-          inAttackAnimation: this.player.inAttackAnimation,
-          attackCooldown: this.player.attackCooldown,
-          lastAttackTime: this.player.lastAttackTime,
-        })
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Combat ending, resetting player state:", {
+            inAttackAnimation: this.player.inAttackAnimation,
+            attackCooldown: this.player.attackCooldown,
+            lastAttackTime: this.player.lastAttackTime,
+          })
+        }
 
         // Add a slight delay before transitioning back to running
         setTimeout(() => {
@@ -233,7 +235,9 @@ export class GameLoop {
       const elapsed = now - this.player.attackAnimationTime
       if (elapsed >= this.player.attackAnimationDuration) {
         this.player.inAttackAnimation = false
-        console.log("Resetting player attack animation via timer check")
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Resetting player attack animation via timer check")
+        }
       }
     }
 
@@ -260,12 +264,14 @@ export class GameLoop {
       // Shake camera on monster death
       this.gameState.shakeCamera(8)
 
-      console.log("Monster died, cleaning up:", {
-        monsterId: combatMonster.id,
-        monsterType: combatMonster.type,
-        inCombat: combatMonster.inCombat,
-        attackCooldown: combatMonster.attackCooldown,
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Monster died, cleaning up:", {
+          monsterId: combatMonster.id,
+          monsterType: combatMonster.type,
+          inCombat: combatMonster.inCombat,
+          attackCooldown: combatMonster.attackCooldown,
+        })
+      }
     }
   }
 
@@ -275,8 +281,8 @@ export class GameLoop {
 
     if (collected) {
       // Use player's luck to determine essence amount
-      const monsterType = this.monsterTypes.get(collected.id.split("-")[1]) || "normal"
-      const essenceAmount = this.player.getEssenceDropAmount(monsterType as any)
+      const monsterTypeString = this.monsterTypes.get(collected.id.split("-")[1]) || "normal"
+      const essenceAmount = this.player.getEssenceDropAmount(monsterTypeString as MonsterType)
       this.player.essence += essenceAmount
 
       // Add trail particles when pet collects essence
@@ -301,8 +307,8 @@ export class GameLoop {
       const wasCollected = drop.update(this.player.position)
       if (wasCollected) {
         // Use player's luck to determine essence amount
-        const monsterType = this.monsterTypes.get(drop.id.split("-")[1]) || "normal"
-        const essenceAmount = this.player.getEssenceDropAmount(monsterType as any)
+        const monsterTypeString = this.monsterTypes.get(drop.id.split("-")[1]) || "normal"
+        const essenceAmount = this.player.getEssenceDropAmount(monsterTypeString as MonsterType)
         this.player.essence += essenceAmount
       }
     })
@@ -329,11 +335,13 @@ export class GameLoop {
   // Exit combat and return to running state
   private exitCombat() {
     // Add debug logging
-    console.log("Exiting combat state", {
-      previousState: this.gameState.getState(),
-      playerAttackAnimation: this.player.inAttackAnimation,
-      playerAttackCooldown: this.player.attackCooldown,
-    })
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Exiting combat state", {
+        previousState: this.gameState.getState(),
+        playerAttackAnimation: this.player.inAttackAnimation,
+        playerAttackCooldown: this.player.attackCooldown,
+      })
+    }
 
     // Reset attack states to prevent getting stuck
     this.player.inAttackAnimation = false

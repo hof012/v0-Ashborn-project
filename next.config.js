@@ -4,16 +4,16 @@ const nextConfig = {
   // Explicitly set output to ensure Next.js detection
   output: "standalone",
   // Disable experimental features that might cause issues
-  experimental: {
-    appDir: true,
-  },
+  // experimental: {
+  // appDir: true,
+  // },
   // Ensure TypeScript errors don't block deployment
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // Ensure ESLint errors don't block deployment
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 }
 

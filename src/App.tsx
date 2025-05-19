@@ -15,14 +15,28 @@ import SpritePreloader from "./ui/SpritePreloader"
 import GameStateDebug from "./ui/GameStateDebug"
 
 export default function App() {
-  const gameState = useGameState()
-  const showTraitPopup = gameState.player.pendingTrait
+  const gameHookState = useGameState();
+  
+  const {
+    player, monsters, damageEvents, essenceDrops, pet, petTrails, 
+    petDefinition, distance, currentPetType, currentBiome, 
+    randomBonusNotification, showLevelUp, showTraitNotification, 
+    traitNotification, gameOver, resetGame,
+    gameState: gameSystemStateObject, // This is snapshot.gameState (the object)
+    rawGameState: currentGameStateString // This is snapshot.gameState.current (the string)
+  } = gameHookState;
 
-  // Function to apply the chosen trait
+  const showTraitPopup = player.pendingTrait;
+
   const handleTraitChoice = (trait: string) => {
-    // This will be passed to the game loop to update the player
-    gameState.applyTrait(trait)
-  }
+    // Access applyTrait directly from the hook's return if it's not part of the destructured snapshot
+    gameHookState.applyTrait(trait);
+  };
+
+  // onSelect for PetSelector needs to come from gameHookState.changePetType
+  const handleChangePetType = (type: any) => { // TODO: use PetType
+    gameHookState.changePetType(type);
+  };
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
@@ -30,79 +44,62 @@ export default function App() {
       <SpritePreloader />
 
       <GameCanvas
-        player={gameState.player}
-        monsters={gameState.monsters}
-        damageEvents={gameState.damageEvents}
-        essenceDrops={gameState.essenceDrops}
-        pet={gameState.pet}
-        petTrails={gameState.petTrails}
-        petDefinition={gameState.petDefinition}
-        distance={gameState.distance}
-        gameState={{
-          current: gameState.gameState.current,
-          isTransitioning: gameState.gameState.isTransitioning,
-          transitionProgress: gameState.gameState.transitionProgress,
-          cameraOffset: gameState.gameState.cameraOffset,
-          combatMonsterId: gameState.gameState.combatMonsterId,
-        }}
+        player={player}
+        monsters={monsters}
+        damageEvents={damageEvents}
+        essenceDrops={essenceDrops}
+        pet={pet}
+        petTrails={petTrails}
+        petDefinition={petDefinition}
+        distance={distance}
+        gameSystemState={gameSystemStateObject} // Pass the object directly
       />
 
       <HUD
-        health={gameState.player.health}
-        maxHealth={gameState.player.maxHealth}
-        level={gameState.player.level}
-        xp={gameState.player.xp}
-        xpToNextLevel={gameState.player.xpToNextLevel}
-        essence={gameState.player.essence}
-        distance={gameState.distance}
-        mp={gameState.player.mp}
-        maxMP={gameState.player.maxMP}
-        stats={gameState.player.stats}
-        unlockedAbilities={gameState.player.unlockedAbilities}
-        petDefinition={gameState.petDefinition}
-        petLevel={gameState.pet.level}
-        petXp={gameState.pet.xp}
-        nextLevelXp={gameState.pet.nextLevelXp}
-        unlockedTraits={gameState.player.unlockedTraits}
-        randomBonuses={gameState.player.randomBonuses}
-        latestRandomBonus={gameState.randomBonusNotification}
-        gameState={gameState.gameState.current}
-        currentBiome={gameState.currentBiome}
+        player={player}
+        pet={pet}
+        petDefinition={petDefinition}
+        distance={distance}
+        latestRandomBonus={randomBonusNotification}
+        currentGameState={currentGameStateString} // Pass the string directly
+        currentBiome={currentBiome}
       />
 
       <PetSelector
-        onSelect={gameState.changePetType}
-        currentType={gameState.currentPetType}
-        petDefinition={gameState.petDefinition}
-        petLevel={gameState.pet.level}
-        petXp={gameState.pet.xp}
-        nextLevelXp={gameState.pet.nextLevelXp}
+        onSelect={handleChangePetType} // Use the new handler
+        currentType={currentPetType}
+        petDefinition={petDefinition}
+        petLevel={pet.level}
+        petXp={pet.xp}
+        nextLevelXp={pet.nextLevelXp}
       />
 
-      {gameState.showLevelUp && <LevelUp level={gameState.player.level} />}
+      {showLevelUp && <LevelUp level={player.level} />}
 
-      {gameState.showTraitNotification && gameState.traitNotification && (
-        <TraitNotification trait={gameState.traitNotification.trait} />
+      {showTraitNotification && traitNotification && (
+        <TraitNotification trait={traitNotification.trait} />
       )}
 
       {showTraitPopup && <TraitChoiceUI onChoose={handleTraitChoice} />}
 
-      {gameState.gameOver && (
+      {gameOver && (
         <GameOver
-          distance={gameState.distance}
-          essence={gameState.player.essence}
-          level={gameState.player.level}
-          onRestart={gameState.resetGame}
+          distance={distance}
+          essence={player.essence}
+          level={player.level}
+          onRestart={resetGame} // resetGame is directly from gameHookState
         />
       )}
 
-      {/* Add the sprite debug components */}
-      <SpriteDebug />
-      <SpriteDebugPanel />
-      <SpriteLoadingStatus />
-
-      {/* Add the debug component */}
-      <GameStateDebug gameState={gameState.gameState} player={gameState.player} />
+      {/* Conditionally render debug components in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <>
+          <SpriteDebug />
+          <SpriteDebugPanel />
+          <SpriteLoadingStatus />
+          <GameStateDebug gameSystemState={gameSystemStateObject} player={player} />
+        </>
+      )}
     </div>
   )
 }
